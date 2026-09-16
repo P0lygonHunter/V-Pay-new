@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { store } from "@/lib/store";
@@ -15,6 +16,7 @@ export async function POST(req: NextRequest) {
     const { phone, otp } = schema.parse(body);
     const normalized = phone.startsWith("+") ? phone : `+92${phone.replace(/^0/, "")}`;
 
+    await store.ready();
     if (!store.verifyOtp(normalized, otp)) {
       return NextResponse.json({ error: "Invalid or expired OTP" }, { status: 401 });
     }

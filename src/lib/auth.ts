@@ -3,6 +3,7 @@ import { verifyAccessToken } from "./jwt";
 import { store } from "./store";
 
 export async function getAuthUser(req: NextRequest) {
+  await store.ready();
   const header = req.headers.get("authorization");
   if (!header?.startsWith("Bearer ")) return null;
   try {

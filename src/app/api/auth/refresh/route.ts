@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { store } from "@/lib/store";
 import { createTokens, verifyRefreshToken } from "@/lib/jwt";

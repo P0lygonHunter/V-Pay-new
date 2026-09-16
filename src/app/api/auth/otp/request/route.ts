@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { store } from "@/lib/store";
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest) {
         ? process.env.DEMO_OTP_CODE || "123456"
         : generateOtp(6);
 
+    await store.ready();
     store.setOtp(normalized, code);
     console.log(`[OTP] ${normalized} → ${code}`);
 

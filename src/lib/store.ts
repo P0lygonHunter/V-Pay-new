@@ -1,34 +1,34 @@
 import { User, Transaction } from "./types";
 import { hashPin } from "./crypto";
 
-const globalStore = globalThis as unknown as {
-  __vortexUsers?: Map<string, User>;
-  __vortexTxs?: Map<string, Transaction>;
-  __vortexOtps?: Map<string, { code: string; expires: number }>;
-  __vortexRefresh?: Set<string>;
-  __vortexSeeded?: boolean;
+const g = globalThis as unknown as {
+  __vxUsers?: Map<string, User>;
+  __vxTxs?: Map<string, Transaction>;
+  __vxOtps?: Map<string, { code: string; expires: number }>;
+  __vxRefresh?: Set<string>;
+  __vxSeeded?: boolean;
 };
 
 function users() {
-  if (!globalStore.__vortexUsers) globalStore.__vortexUsers = new Map();
-  return globalStore.__vortexUsers;
+  if (!g.__vxUsers) g.__vxUsers = new Map();
+  return g.__vxUsers;
 }
 function txs() {
-  if (!globalStore.__vortexTxs) globalStore.__vortexTxs = new Map();
-  return globalStore.__vortexTxs;
+  if (!g.__vxTxs) g.__vxTxs = new Map();
+  return g.__vxTxs;
 }
 function otps() {
-  if (!globalStore.__vortexOtps) globalStore.__vortexOtps = new Map();
-  return globalStore.__vortexOtps;
+  if (!g.__vxOtps) g.__vxOtps = new Map();
+  return g.__vxOtps;
 }
 function refreshTokens() {
-  if (!globalStore.__vortexRefresh) globalStore.__vortexRefresh = new Set();
-  return globalStore.__vortexRefresh;
+  if (!g.__vxRefresh) g.__vxRefresh = new Set();
+  return g.__vxRefresh;
 }
 
-async function seed() {
-  if (globalStore.__vortexSeeded) return;
-  globalStore.__vortexSeeded = true;
+async function ensureSeed() {
+  if (g.__vxSeeded) return;
+  g.__vxSeeded = true;
   const pinHash = await hashPin("1234");
   const demo: User = {
     id: "user_demo_001",
@@ -53,9 +53,10 @@ async function seed() {
   demoTxs.forEach((t) => txs().set(t.id, t));
 }
 
-seed();
-
 export const store = {
+  async ready() {
+    await ensureSeed();
+  },
   getUserById: (id: string) => users().get(id),
   getUserByPhone: (phone: string) => users().get(phone),
   saveUser: (user: User) => {
