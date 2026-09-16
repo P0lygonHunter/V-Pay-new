@@ -29,8 +29,14 @@ export async function POST(req: NextRequest) {
       ...(process.env.DEMO_OTP_ENABLED !== "false" ? { demoOtp: code } : {}),
     });
   } catch (err: unknown) {
-    if (err && typeof err === "object" && "name" in err && (err as { name: string }).name === "ZodError") {
-      const zodErr = err as { errors: unknown };
+    if (
+      err &&
+      typeof err === "object" &&
+      "name" in err &&
+      (err as { name: string }).name === "ZodError" &&
+      "errors" in err
+    ) {
+      const zodErr = err as { name: string; errors: unknown };
       return NextResponse.json({ error: "Validation failed", details: zodErr.errors }, { status: 400 });
     }
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
