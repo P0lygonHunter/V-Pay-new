@@ -51,9 +51,10 @@ export async function POST(req: NextRequest) {
       },
       ...tokens,
     });
-  } catch (err: any) {
-    if (err.name === "ZodError") {
-      return NextResponse.json({ error: "Validation failed", details: err.errors }, { status: 400 });
+  } catch (err: unknown) {
+    if (err && typeof err === "object" && "name" in err && (err as { name: string }).name === "ZodError") {
+      const zodErr = err as { errors: unknown };
+      return NextResponse.json({ error: "Validation failed", details: zodErr.errors }, { status: 400 });
     }
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
