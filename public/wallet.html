@@ -12,33 +12,36 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <!-- PIN LOCK SCREEN (shown first if enabled) -->
+  <!-- PIN LOCK SCREEN -->
   <div id="pin-lock" class="pin-lock hidden">
     <div class="pin-content">
-      <div class="pin-logo">V</div>
-      <h2 class="pin-title">Enter PIN</h2>
-      <p class="pin-subtitle">Vortex Wallet</p>
+      <div class="pin-brand">
+        <div class="pin-logo">V</div>
+        <span class="pin-brand-name">Vortex</span>
+      </div>
+      <h2 class="pin-title">Welcome back</h2>
+      <p class="pin-subtitle">Enter your 4-digit PIN to continue</p>
       <div class="pin-dots" id="pin-dots">
         <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
       </div>
       <div class="pin-pad" id="pin-pad">
-        <button data-num="1">1</button>
-        <button data-num="2">2</button>
-        <button data-num="3">3</button>
-        <button data-num="4">4</button>
-        <button data-num="5">5</button>
-        <button data-num="6">6</button>
-        <button data-num="7">7</button>
-        <button data-num="8">8</button>
-        <button data-num="9">9</button>
-        <button data-num="clear" class="pin-action">C</button>
-        <button data-num="0">0</button>
-        <button data-num="back" class="pin-action">
+        <button type="button" data-num="1">1</button>
+        <button type="button" data-num="2">2</button>
+        <button type="button" data-num="3">3</button>
+        <button type="button" data-num="4">4</button>
+        <button type="button" data-num="5">5</button>
+        <button type="button" data-num="6">6</button>
+        <button type="button" data-num="7">7</button>
+        <button type="button" data-num="8">8</button>
+        <button type="button" data-num="9">9</button>
+        <button type="button" data-num="clear" class="pin-action">Clear</button>
+        <button type="button" data-num="0">0</button>
+        <button type="button" data-num="back" class="pin-action" aria-label="Delete">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
         </button>
       </div>
       <p class="pin-error hidden" id="pin-error">Incorrect PIN. Try again.</p>
-      <p class="pin-hint">Demo PIN: <strong>1234</strong></p>
+      <p class="pin-hint">Demo PIN · <strong>1234</strong></p>
     </div>
   </div>
 
@@ -109,14 +112,6 @@
             </div>
             <span data-i18n="add_money">Add Money</span>
           </button>
-          <button class="action-btn" data-action="scan">
-            <div class="action-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/>
-              </svg>
-            </div>
-            <span data-i18n="scan">Scan</span>
-          </button>
         </div>
 
         <div class="section-header">
@@ -167,13 +162,21 @@
         <div class="form-group">
           <label data-i18n="recipient">Recipient</label>
           <div class="input-with-icon">
-            <input type="text" id="send-recipient" placeholder="Phone, email or account number" data-i18n-placeholder="recipient_placeholder">
-            <button class="input-icon-btn" aria-label="Contacts">
+            <input type="tel" id="send-recipient" placeholder="0300-1234567" data-i18n-placeholder="recipient_placeholder" autocomplete="tel">
+            <button type="button" class="input-icon-btn" id="btn-contacts" aria-label="Contacts">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
               </svg>
             </button>
+          </div>
+          <div id="recipient-preview" class="recipient-preview hidden">
+            <div class="rp-avatar" id="rp-avatar">?</div>
+            <div class="rp-info">
+              <strong id="rp-name">—</strong>
+              <span id="rp-phone">—</span>
+            </div>
+            <span class="rp-badge">Vortex</span>
           </div>
         </div>
         <div class="form-group">
@@ -201,15 +204,15 @@
       </header>
       <main class="content receive-content">
         <div class="qr-card">
-          <div class="qr-placeholder" id="qr-code">
-            <div class="qr-grid"></div>
+          <div class="qr-frame">
+            <img id="qr-image" class="qr-image" alt="Payment QR Code" width="180" height="180" />
           </div>
           <p class="qr-label" data-i18n="scan_to_pay">Scan to pay me</p>
         </div>
         <div class="receive-info">
           <div class="info-row">
             <span class="info-label" data-i18n="account">Account</span>
-            <span class="info-value" id="account-number">03XX-XXXXXXX</span>
+            <span class="info-value" id="account-number">0300-1234567</span>
           </div>
           <div class="info-row">
             <span class="info-label" data-i18n="name">Name</span>
@@ -410,6 +413,18 @@
       <button class="lang-option active" data-lang="en">English</button>
       <button class="lang-option" data-lang="ur">اردو (Urdu)</button>
       <button class="modal-close" data-i18n="cancel">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Success overlay -->
+  <div id="success-overlay" class="success-overlay hidden">
+    <div class="success-card">
+      <div class="success-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <h3 id="success-title">Success</h3>
+      <p id="success-msg"></p>
+      <button type="button" class="primary-btn" id="success-done">Done</button>
     </div>
   </div>
 

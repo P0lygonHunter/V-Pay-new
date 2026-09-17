@@ -1,5 +1,5 @@
 /* ============================================================
-   Vortex Wallet — Mock Data (PKR)
+   Vortex Wallet — Mock Data + Demo Contacts
    ============================================================ */
 
 const MOCK_TRANSACTIONS = [
@@ -62,33 +62,36 @@ const MOCK_TRANSACTIONS = [
     time: "21:03",
     status: "Completed",
     note: ""
-  },
-  {
-    id: "tx_007",
-    type: "sent",
-    title: "Utility Bill Payment",
-    amount: 6750,
-    date: "2026-09-09",
-    time: "13:50",
-    status: "Completed",
-    note: "Electricity"
-  },
-  {
-    id: "tx_008",
-    type: "received",
-    title: "Received from Hamza Khan",
-    amount: 12000,
-    date: "2026-09-08",
-    time: "18:17",
-    status: "Completed",
-    note: "Freelance work"
   }
 ];
 
 const USER = {
   name: "Ahmed Khan",
   phone: "+92 300 1234567",
-  account: "03XX-XXXXXXX",
-  balance: 248650.00,
+  account: "0300-1234567",
+  balance: 248650.0,
   currency: "PKR"
 };
+
+/** Demo contacts for recipient lookup (normalized phone → profile) */
+const DEMO_CONTACTS = {
+  "03050000000": { name: "Ali Raza", phone: "0305-0000000", initial: "A" },
+  "03000000000": { name: "Sara Ahmed", phone: "0300-0000000", initial: "S" },
+  "03211234567": { name: "Usman Malik", phone: "0321-1234567", initial: "U" },
+  "03331234567": { name: "Fatima Noor", phone: "0333-1234567", initial: "F" },
+  "03451234567": { name: "Hamza Khan", phone: "0345-1234567", initial: "H" },
+  "03001234567": { name: "Ahmed Khan (You)", phone: "0300-1234567", initial: "A" }
+};
+
+function normalizePhone(raw) {
+  if (!raw) return "";
+  let d = String(raw).replace(/\D/g, "");
+  if (d.startsWith("92") && d.length >= 12) d = "0" + d.slice(2);
+  return d;
+}
+
+function lookupContact(raw) {
+  const key = normalizePhone(raw);
+  if (key.length < 11) return null;
+  return DEMO_CONTACTS[key] || null;
+}

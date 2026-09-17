@@ -25,6 +25,9 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFilters();
   setupPinLock();
   setupAddMoney();
+  setupRecipientLookup();
+  setupQRCode();
+  setupSuccessOverlay();
   updateGreeting();
 });
 
@@ -179,11 +182,15 @@ function setupActions() {
     const amount = document.getElementById("send-amount").value;
     const recipient = document.getElementById("send-recipient").value;
     if (!recipient || !amount || Number(amount) <= 0) {
-      showToast("Please enter valid recipient and amount");
+      showToast("Enter recipient and a valid amount");
       return;
     }
-    showToast("Demo: PKR " + formatPKR(amount) + " will be sent");
-    setTimeout(() => showScreen("screen-home"), 1500);
+    const contact = lookupContact(recipient);
+    const name = contact ? contact.name : recipient;
+    showSuccess(
+      "Money Sent",
+      "PKR " + formatPKR(amount) + " sent to " + name + ".\n(Demo — not a real transfer)"
+    );
   });
 
   document.getElementById("btn-copy-account")?.addEventListener("click", () => {
@@ -302,7 +309,71 @@ function setupAddMoney() {
       showToast("Enter a valid amount");
       return;
     }
-    showToast("Demo: PKR " + formatPKR(amount) + " via " + selectedMethod);
-    setTimeout(() => showScreen("screen-home"), 1500);
+    const labels = { bank: "Bank Transfer", card: "Card", jazzcash: "JazzCash / EasyPaisa" };
+    showSuccess(
+      "Request Submitted",
+      "PKR " + formatPKR(amount) + " via " + (labels[selectedMethod] || selectedMethod) + ".\n(Demo — connect real provider later)"
+    );
   });
 }
+
+/* ---------- Recipient lookup ---------- */
+function setupRecipientLookup() {
+  const input = document.getElementById("send-recipient");
+  const preview = document.getElementById("recipient-preview");
+  if (!input || !preview) return;
+
+  const update = () => {
+    const contact = lookupContact(input.value);
+    if (contact) {
+      document.getElementById("rp-avatar").textContent = contact.initial;
+      document.getElementById("rp-name").textContent = contact.name;
+      document.getElementById("rp-phone").textContent = contact.phone;
+      preview.classList.remove("hidden");
+    } else {
+      preview.classList.add("hidden");
+    }
+  };
+
+  input.addEventListener("input", update);
+  input.addEventListener("blur", update);
+}
+
+/* ---------- QR Code ---------- */
+function setupQRCode() {
+  const img = document.getElementById("qr-image");
+  if (!img) return;
+  const payload = "vortex://pay/" + encodeURIComponent(USER.account) + "?name=" + encodeURIComponent(USER.name);
+  img.src = "https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=8&data=" + encodeURIComponent(payload);
+  img.onerror = () => {
+    img.alt = "QR unavailable offline";
+  };
+}
+
+/* ---------- Success overlay ---------- */
+function showSuccess(title, message) {
+  const el = document.getElementById("success-overlay");
+  if (!el) {
+    showToast(title);
+    return;
+  }
+  document.getElementById("success-title").textContent = title;
+  document.getElementById("success-msg").textContent = message;
+  el.classList.remove("hidden");
+}
+
+function setupSuccessOverlay() {
+  document.getElementById("success-done")?.addEventListener("click", () => {
+    document.getElementById("success-overlay")?.classList.add("hidden");
+    // clear send form
+    const r = document.getElementById("send-recipient");
+    const a = document.getElementById("send-amount");
+    const n = document.getElementById("send-note");
+    if (r) r.value = "";
+    if (a) a.value = "";
+    if (n) n.value = "";
+    document.getElementById("recipient-preview")?.classList.add("hidden");
+    showScreen("screen-home");
+  });
+}
+
