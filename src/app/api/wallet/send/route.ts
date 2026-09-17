@@ -2,15 +2,16 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthUser } from "@/lib/auth";
-import { store } from "@/lib/store";
-import { generateId, generateReference, verifyPin } from "@/lib/crypto";
-import { Transaction } from "@/lib/types";
+import { verifyPin } from "@/lib/crypto";
+import { sendMoney, InsufficientBalanceError, UserNotFoundError } from "@/lib/money";
+import { rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   to: z.string().min(3),
   amount: z.number().positive().max(1_000_000),
   note: z.string().max(200).optional(),
-  pin: z.string().length(4).optional(),
+  pin: z.string().length(4),
+  idempotencyKey: z.string().uuid().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -19,36 +20,40 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = schema.parse(await req.json());
-    const user = auth.user;
+    const { user } = auth;
 
-    if (user.balance < body.amount) {
+    const limit = await rateLimit.send(user.id);
+    if (!limit.success) {
+      return NextResponse.json({ error: "Too many send attempts. Slow down." }, { status: 429 });
+    }
+
+    // PIN is now mandatory, not optional-if-present. A user with no PIN
+    // set yet cannot send money at all until they call /api/wallet/set-pin.
+    if (!user.pinHash) {
+      return NextResponse.json(
+        { error: "Set a PIN before sending money", code: "PIN_NOT_SET" },
+        { status: 403 }
+      );
+    }
+    const pinOk = await verifyPin(body.pin, user.pinHash);
+    if (!pinOk) return NextResponse.json({ error: "Incorrect PIN" }, { status: 401 });
+
+    const transaction = await sendMoney({
+      senderId: user.id,
+      toAccountNumberOrPhone: body.to,
+      amount: body.amount,
+      note: body.note,
+      idempotencyKey: body.idempotencyKey,
+    });
+
+    return NextResponse.json({ success: true, transaction });
+  } catch (err: unknown) {
+    if (err instanceof InsufficientBalanceError) {
       return NextResponse.json({ error: "Insufficient balance" }, { status: 400 });
     }
-
-    if (body.pin && user.pinHash) {
-      const ok = await verifyPin(body.pin, user.pinHash);
-      if (!ok) return NextResponse.json({ error: "Incorrect PIN" }, { status: 401 });
+    if (err instanceof UserNotFoundError) {
+      return NextResponse.json({ error: "Sender account not found" }, { status: 404 });
     }
-
-    store.updateBalance(user.id, user.balance - body.amount);
-
-    const tx: Transaction = {
-      id: generateId("tx"),
-      userId: user.id,
-      type: "sent",
-      title: `Sent to ${body.to}`,
-      amount: body.amount,
-      currency: "PKR",
-      status: "completed",
-      note: body.note,
-      counterparty: body.to,
-      reference: generateReference(),
-      createdAt: new Date().toISOString(),
-    };
-    store.addTransaction(tx);
-
-    return NextResponse.json({ success: true, transaction: tx });
-  } catch (err: unknown) {
     if (
       err &&
       typeof err === "object" &&

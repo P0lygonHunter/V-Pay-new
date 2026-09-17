@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { user } = auth;
   return NextResponse.json({
-    balance: user.balance,
+    balance: user.balance.toString(),
     currency: user.currency,
     accountNumber: user.accountNumber,
   });

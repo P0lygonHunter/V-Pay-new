@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+// ---------------------------------------------------------------------------
+// User
+// ---------------------------------------------------------------------------
+model User {
+  id            String   @id @default(cuid())
+  phone         String   @unique
+  name          String
+  accountNumber String   @unique
+  balance       Decimal  @default(0) @db.Decimal(18, 2)
+  currency      String   @default("PKR")
+  pinHash       String?
+  isVerified    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // version column for optimistic locking as a defense-in-depth layer
+  // in addition to the row-level SELECT ... FOR UPDATE used in transfers
+  version Int @default(0)
+
+  refreshTokens  RefreshToken[]
+  ledgerEntries  LedgerEntry[]
+
+  @@index([phone])
+  @@index([accountNumber])
+}
+
+// ---------------------------------------------------------------------------
+// OTP — codes are stored hashed, never plaintext, and attempts are capped
+// ---------------------------------------------------------------------------
+model OtpChallenge {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  codeHash  String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Transaction — one logical event (a send, an add-money, etc.)
+// Money movement itself is recorded in LedgerEntry rows, never on User
+// directly outside of a DB transaction, so balance is always derivable
+// from summing ledger entries (source of truth), with User.balance as a
+// cached/denormalized value kept in sync inside the same DB transaction.
+// ---------------------------------------------------------------------------
+enum TransactionType {
+  SENT
+  RECEIVED
+  ADD_MONEY
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Transaction {
+  id          String            @id @default(cuid())
+  type        TransactionType
+  status      TransactionStatus @default(COMPLETED)
+  amount      Decimal           @db.Decimal(18, 2)
+  currency    String            @default("PKR")
+  note        String?
+  counterparty String?
+  reference   String            @unique
+  provider    String?
+  idempotencyKey String?        @unique
+  createdAt   DateTime          @default(now())
+
+  // Owning user — set even while the transaction is PENDING and has no
+  // ledger entries yet (e.g. an add-money awaiting gateway webhook
+  // confirmation). Ledger entries are the source of truth for *balance*
+  // history; this field is what lets "my pending payments" be queried
+  // before any money has actually moved.
+  ownerUserId String?
+
+  ledgerEntries LedgerEntry[]
+
+  @@index([reference])
+  @@index([ownerUserId])
+}
+
+enum LedgerDirection {
+  DEBIT
+  CREDIT
+}
+
+model LedgerEntry {
+  id            String          @id @default(cuid())
+  transactionId String
+  transaction   Transaction     @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  direction     LedgerDirection
+  amount        Decimal         @db.Decimal(18, 2)
+  balanceAfter  Decimal         @db.Decimal(18, 2)
+  createdAt     DateTime        @default(now())
+
+  @@index([userId, createdAt])
+  @@index([transactionId])
+}

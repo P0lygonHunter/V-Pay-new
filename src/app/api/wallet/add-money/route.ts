@@ -2,13 +2,12 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthUser } from "@/lib/auth";
-import { store } from "@/lib/store";
-import { generateId, generateReference } from "@/lib/crypto";
-import { Transaction } from "@/lib/types";
+import { createPendingAddMoney } from "@/lib/money";
 
 const schema = z.object({
   amount: z.number().positive().max(500_000),
   method: z.enum(["jazzcash", "easypaisa", "bank", "card"]),
+  idempotencyKey: z.string().uuid().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -17,31 +16,28 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = schema.parse(await req.json());
-    const user = auth.user;
+    const { user } = auth;
 
-    // Sandbox payment simulation (replace with real JazzCash/EasyPaisa later)
-    console.log(`[Payment SANDBOX] ${body.method} ${body.amount} PKR for ${user.id}`);
-
-    store.updateBalance(user.id, user.balance + body.amount);
-
-    const tx: Transaction = {
-      id: generateId("tx"),
+    // This creates a PENDING transaction only. Balance is NOT credited
+    // here. Crediting happens exclusively in confirmPendingAddMoney(),
+    // called from the payment gateway's webhook once it confirms the
+    // charge actually succeeded. That webhook does not exist yet — this
+    // is item #3, still pending real JazzCash/EasyPaisa/bank
+    // credentials. Until it's wired, this endpoint will create pending
+    // transactions that never complete, which is the safe failure mode
+    // (compare to the old behavior: instant, unconditional balance
+    // credit from an unauthenticated client-supplied amount).
+    const transaction = await createPendingAddMoney({
       userId: user.id,
-      type: "add_money",
-      title: `Added via ${body.method}`,
       amount: body.amount,
-      currency: "PKR",
-      status: "completed",
-      reference: generateReference(),
-      provider: body.method,
-      createdAt: new Date().toISOString(),
-    };
-    store.addTransaction(tx);
+      method: body.method,
+      idempotencyKey: body.idempotencyKey,
+    });
 
     return NextResponse.json({
       success: true,
-      transaction: tx,
-      message: "Payment completed (sandbox)",
+      transaction,
+      message: "Payment initiated — awaiting gateway confirmation (not yet wired; see item #3)",
     });
   } catch (err: unknown) {
     if (

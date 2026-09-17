@@ -9,6 +9,16 @@ export async function verifyPin(pin: string, hash: string): Promise<boolean> {
   return bcrypt.compare(pin, hash);
 }
 
+// OTPs are low-entropy (6 digits) but still must never sit in the DB as
+// plaintext — a DB leak should not hand out live login codes.
+export async function hashOtp(otp: string): Promise<string> {
+  return bcrypt.hash(otp, 10);
+}
+
+export async function verifyOtpHash(otp: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(otp, hash);
+}
+
 export function generateId(prefix = ""): string {
   const id = randomBytes(8).toString("hex");
   return prefix ? `${prefix}_${id}` : id;
