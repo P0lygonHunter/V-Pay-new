@@ -1,4 +1,4 @@
-# Vortex Wallet (Next.js — Vercel Ready)
+# V-Pay-wallet (Next.js — Vercel Ready)
 
 Frontend + Secure Backend in one Next.js project.
 
