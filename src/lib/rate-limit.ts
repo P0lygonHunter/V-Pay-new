@@ -1,7 +1,7 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-const hasUpstash = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
+const hasUpstash = !!process.env.UPSTASH_REDIS_KV_REST_API_URL && !!process.env.UPSTASH_REDIS_KV_REST_API_TOKEN;
 
 // If Upstash isn't configured yet, rate limiting is skipped rather than
 // crashing every request. This is a deliberate, visible trade-off — see
@@ -15,8 +15,8 @@ let sendLimiter: Ratelimit | null = null;
 
 if (hasUpstash) {
   const redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL!,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+    url: process.env.UPSTASH_REDIS_KV_REST_API_URL!,
+    token: process.env.UPSTASH_REDIS_KV_REST_API_TOKEN!,
   });
 
   // OTP request: 5 per phone number per 10 minutes — stops SMS-bombing
